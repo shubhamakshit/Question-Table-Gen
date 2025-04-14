@@ -66,7 +66,7 @@ You are given an image file. Your task is to:
 
 Output Format:
 
-If sections are detected:
+If sections are detected (try your level best to do so):
 
 {{
   "status": "success",
