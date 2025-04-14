@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MD3 Image Analyzer</title>
+    <link rel="stylesheet" href="static/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body class="light-theme">
+    <div class="app-container">
+        <!-- App Bar -->
+        <header class="app-bar">
+            <h1 class="app-title">Image Answer Analyzer</h1>
+            <div class="app-bar-actions">
+                <button id="settings-btn" class="icon-button" aria-label="Settings">
+                    <span class="material-icons">settings</span>
+                </button>
+                <button id="theme-toggle" class="icon-button" aria-label="Toggle theme">
+                    <span class="material-icons">dark_mode</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main>
+            <!-- Upload Section -->
+            <section id="upload-section" class="card">
+                <div class="card-content">
+                    <h2 class="section-title">Upload Image</h2>
+                    <div id="upload-container" class="upload-container">
+                        <div id="drop-area">
+                            <span class="material-icons upload-icon">cloud_upload</span>
+                            <p>Drag & drop image or click to browse</p>
+                            <input type="file" id="file-input" accept="image/*">
+                        </div>
+                        <div id="preview-container" class="hidden">
+                            <img id="image-preview" alt="Preview">
+                            <div class="preview-actions">
+                                <button id="change-image-btn" class="button secondary">Change Image</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="upload-actions">
+                        <button id="upload-btn" class="button primary" disabled>Upload & Process</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Loading Indicator -->
+            <div id="loading-container" class="hidden">
+                <div class="spinner"></div>
+                <p>Processing image...</p>
+            </div>
+
+            <!-- Results Section -->
+            <section id="results-section" class="card hidden">
+                <div class="card-content">
+                    <h2 class="section-title">Results</h2>
+                    <div class="view-toggle">
+                        <button id="table-view-btn" class="toggle-btn active" aria-label="Table View">
+                            <span class="material-icons">grid_view</span> Table
+                        </button>
+                        <button id="slide-view-btn" class="toggle-btn" aria-label="Slide View">
+                            <span class="material-icons">slideshow</span> Slide
+                        </button>
+                    </div>
+                    
+                    <div id="table-view" class="result-view">
+                        <!-- Tables will be generated here -->
+                    </div>
+                    
+                    <div id="slide-view" class="result-view hidden">
+                        <div class="slide-container">
+                            <div class="slide-content">
+                                <h3 id="slide-title">Question <span id="slide-number">1</span></h3>
+                                <div id="slide-data">
+                                    <p class="question-number">Question: <span id="current-question"></span></p>
+                                    <p class="answer">Answer: <span id="current-answer"></span></p>
+                                </div>
+                            </div>
+                            <div class="slide-navigation">
+                                <button id="prev-slide" class="nav-btn" disabled>
+                                    <span class="material-icons">arrow_back</span>
+                                </button>
+                                <p><span id="current-slide">1</span> / <span id="total-slides">0</span></p>
+                                <button id="next-slide" class="nav-btn" disabled>
+                                    <span class="material-icons">arrow_forward</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="results-actions">
+                        <button id="save-results-btn" class="button secondary">
+                            <span class="material-icons">save</span> Save Results
+                        </button>
+                        <button id="new-upload-btn" class="button primary">
+                            <span class="material-icons">add_photo_alternate</span> New Upload
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Error Message -->
+            <div id="error-container" class="card error-card hidden">
+                <div class="card-content">
+                    <span class="material-icons error-icon">error</span>
+                    <h3>Error</h3>
+                    <p id="error-message"></p>
+                    <button id="dismiss-error" class="button secondary">Dismiss</button>
+                </div>
+            </div>
+        </main>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="modal hidden">
+            <div class="modal-content card">
+                <div class="modal-header">
+                    <h2>Settings</h2>
+                    <button id="close-settings" class="icon-button">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="setting-item">
+                        <label for="api-url">API URL</label>
+                        <input type="text" id="api-url" class="text-input" value="http://127.0.0.1:5000/upload">
+                    </div>
+                    <div class="setting-item">
+                        <label for="timeout">Request Timeout (seconds)</label>
+                        <input type="number" id="timeout" class="text-input" min="1" value="30">
+                    </div>
+                    <div class="setting-item checkbox">
+                        <label for="preview-enabled">Enable Image Preview</label>
+                        <div class="switch">
+                            <input type="checkbox" id="preview-enabled" checked>
+                            <span class="slider"></span>
+                        </div>
+                    </div>
+                    <div class="setting-item checkbox">
+                        <label for="save-results">Save Results Locally</label>
+                        <div class="switch">
+                            <input type="checkbox" id="save-results" checked>
+                            <span class="slider"></span>
+                        </div>
+                    </div>
+                </div>
+                <div class="setting-item checkbox">
+                    <div>
+                        <label for="debug-enabled">Enable Debug Console</label>
+                        <div class="setting-description">Show technical logs and debugging information</div>
+                    </div>
+                    <div class="switch">
+                        <input type="checkbox" id="debug-enabled">
+                        <span class="slider"></span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="save-settings" class="button primary">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="static/app.js"></script>
+</body>
+</html>
