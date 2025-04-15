@@ -37,7 +37,7 @@ const elements = {
     timeout: document.getElementById('timeout'),
     previewEnabled: document.getElementById('preview-enabled'),
     saveResults: document.getElementById('save-results'),
-    fullscreenBtn: document.getElementById('fullscreen-btn') // P6c14
+    modalBtn: document.getElementById('modal-btn') // P541c
 };
 
 const state = {
@@ -367,13 +367,61 @@ function resetApp() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function toggleFullscreen() {
-    const slideContainer = elements.slideView.querySelector('.slide-container');
-    slideContainer.classList.toggle('fullscreen');
-    if (slideContainer.classList.contains('fullscreen')) {
-        elements.fullscreenBtn.textContent = 'fullscreen_exit';
-    } else {
-        elements.fullscreenBtn.textContent = 'fullscreen';
+function openModal() {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
+    modal.innerHTML = `
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <div class="modal-body">
+                <h3 id="modal-slide-title">Question <span id="modal-slide-number">1</span></h3>
+                <div id="modal-slide-data">
+                    <p class="question-number">Question: <span id="modal-current-question"></span></p>
+                    <p class="answer">Answer: <span id="modal-current-answer"></span></p>
+                </div>
+            </div>
+            <div class="modal-navigation">
+                <button id="modal-prev-slide" class="nav-btn" disabled>
+                    <span class="material-icons">arrow_back</span>
+                </button>
+                <p><span id="modal-current-slide">1</span> / <span id="modal-total-slides">0</span></p>
+                <button id="modal-next-slide" class="nav-btn" disabled>
+                    <span class="material-icons">arrow_forward</span>
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    const closeModalBtn = modal.querySelector('.close-btn');
+    closeModalBtn.addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+    updateModalSlideView(modal);
+}
+
+function updateModalSlideView(modal) {
+    if (state.slides.length === 0) return;
+    const slide = state.slides[state.currentSlideIndex];
+    modal.querySelector('#modal-current-slide').textContent = state.currentSlideIndex + 1;
+    modal.querySelector('#modal-slide-number').textContent = state.currentSlideIndex + 1;
+    modal.querySelector('#modal-slide-title').textContent = `${slide.section} - Question ${slide.questionNumber}`;
+    modal.querySelector('#modal-current-question').textContent = slide.questionNumber;
+    modal.querySelector('#modal-current-answer').textContent = slide.answer;
+    modal.querySelector('#modal-prev-slide').disabled = state.currentSlideIndex === 0;
+    modal.querySelector('#modal-next-slide').disabled = state.currentSlideIndex === state.slides.length - 1;
+}
+
+function nextModalSlide(modal) {
+    if (state.currentSlideIndex < state.slides.length - 1) {
+        state.currentSlideIndex++;
+        updateModalSlideView(modal);
+    }
+}
+
+function prevModalSlide(modal) {
+    if (state.currentSlideIndex > 0) {
+        state.currentSlideIndex--;
+        updateModalSlideView(modal);
     }
 }
 
@@ -435,7 +483,7 @@ function setupEventListeners() {
             elements.settingsModal.classList.add('hidden');
         }
     });
-    elements.fullscreenBtn.addEventListener('click', toggleFullscreen); // P6c14
+    elements.modalBtn.addEventListener('click', openModal); // P541c
 }
 
 document.addEventListener('DOMContentLoaded', init);
