@@ -104,7 +104,7 @@ body {
     --on-surface-variant: var(--on-surface-variant-dark);
     --outline: var(--outline-dark);
     --error: var(--error-dark);
-    --on-error: var(--on-error-dark);
+    --on-error: var (--on-error-dark);
     --error-container: var(--error-container-dark);
     --ripple: var(--ripple-dark);
 }
@@ -410,7 +410,7 @@ body {
 .nav-btn {
     background-color: var(--primary-container);
     border: none;
-    border-radius: 50%;
+    border-radius: 12px;
     width: 100%;
     height: 80px;
     display: flex;
@@ -436,69 +436,6 @@ body {
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
-/* Slide View */
-.slide-container {
-    background-color: var(--surface-variant);
-    border-radius: 12px;
-    padding: 2rem;
-    min-height: 200px;
-    position: relative;
-}
-
-.slide-content {
-    margin-bottom: 2rem;
-}
-
-#slide-title {
-    margin-bottom: 1.5rem;
-    color: var(--primary);
-}
-
-#slide-data {
-    font-size: 1.2rem;
-    line-height: 1.6;
-}
-
-.question-number {
-    margin-bottom: 0.5rem;
-}
-
-.answer {
-    font-weight: 500;
-}
-
-.slide-navigation {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-}
-
-.nav-btn {
-    background-color: var(--primary-container);
-    border: none;
-    border-radius: 50%;
-    width: 100%;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    color: var(--on-primary-container);
-    transition: all 0.3s ease;
-}
-
-.nav-btn:disabled {
-    background-color: var(--surface);
-    color: var(--outline);
-    cursor: not-allowed;
-}
-
-.nav-btn:not(:disabled):hover {
-    background-color: var(--primary);
-    color: var(--on-primary);
-}
-
 /* Larger Modal Slide View */
 .modal-btn {
     position: absolute;
@@ -506,9 +443,9 @@ body {
     right: 10px;
     background-color: var(--surface-variant);
     border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    border-radius: 12px;
+    width: 100%;
+    height: 80px;
     display: flex;
     align-items: center;
     justify-content: center;
