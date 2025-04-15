@@ -1,22 +1,15 @@
-// Constants
 const DEFAULT_API_URL = window.location.origin+'/upload';
 const DEFAULT_TIMEOUT = 30; // seconds
 
-// DOM Elements
 const elements = {
-    // Theme
     themeToggle: document.getElementById('theme-toggle'),
     themeIcon: document.querySelector('#theme-toggle .material-icons'),
-    
-    // Upload
     dropArea: document.getElementById('drop-area'),
     fileInput: document.getElementById('file-input'),
     previewContainer: document.getElementById('preview-container'),
     imagePreview: document.getElementById('image-preview'),
     changeImageBtn: document.getElementById('change-image-btn'),
     uploadBtn: document.getElementById('upload-btn'),
-    
-    // Results
     resultsSection: document.getElementById('results-section'),
     tableViewBtn: document.getElementById('table-view-btn'),
     slideViewBtn: document.getElementById('slide-view-btn'),
@@ -32,16 +25,10 @@ const elements = {
     slideTitle: document.getElementById('slide-title'),
     saveResultsBtn: document.getElementById('save-results-btn'),
     newUploadBtn: document.getElementById('new-upload-btn'),
-    
-    // Loading
     loadingContainer: document.getElementById('loading-container'),
-    
-    // Error
     errorContainer: document.getElementById('error-container'),
     errorMessage: document.getElementById('error-message'),
     dismissError: document.getElementById('dismiss-error'),
-    
-    // Settings
     settingsBtn: document.getElementById('settings-btn'),
     settingsModal: document.getElementById('settings-modal'),
     closeSettings: document.getElementById('close-settings'),
@@ -49,10 +36,10 @@ const elements = {
     apiUrl: document.getElementById('api-url'),
     timeout: document.getElementById('timeout'),
     previewEnabled: document.getElementById('preview-enabled'),
-    saveResults: document.getElementById('save-results')
+    saveResults: document.getElementById('save-results'),
+    fullscreenBtn: document.getElementById('fullscreen-btn') // P6c14
 };
 
-// State
 const state = {
     theme: 'light',
     selectedFile: null,
@@ -67,28 +54,22 @@ const state = {
     }
 };
 
-// Initialize
 function init() {
     loadSettings();
     setupEventListeners();
     applyTheme();
 }
 
-// Settings
 function loadSettings() {
     const savedSettings = localStorage.getItem('imageProcessorSettings');
     if (savedSettings) {
         try {
             const parsedSettings = JSON.parse(savedSettings);
             state.settings = { ...state.settings, ...parsedSettings };
-            
-            // Apply settings to form elements
             elements.apiUrl.value = state.settings.apiUrl;
             elements.timeout.value = state.settings.timeout;
             elements.previewEnabled.checked = state.settings.previewEnabled;
             elements.saveResults.checked = state.settings.saveResults;
-            
-            // Apply theme if saved
             if (parsedSettings.theme) {
                 state.theme = parsedSettings.theme;
             }
@@ -104,17 +85,13 @@ function saveSettings() {
     state.settings.previewEnabled = elements.previewEnabled.checked;
     state.settings.saveResults = elements.saveResults.checked;
     state.settings.theme = state.theme;
-    
     localStorage.setItem('imageProcessorSettings', JSON.stringify(state.settings));
     showNotification('Settings saved successfully');
 }
 
-// Theme
 function toggleTheme() {
     state.theme = state.theme === 'light' ? 'dark' : 'light';
     applyTheme();
-    
-    // Save theme preference
     const savedSettings = { ...state.settings, theme: state.theme };
     localStorage.setItem('imageProcessorSettings', JSON.stringify(savedSettings));
 }
@@ -124,19 +101,15 @@ function applyTheme() {
     elements.themeIcon.textContent = state.theme === 'dark' ? 'light_mode' : 'dark_mode';
 }
 
-// File Upload
 function handleFileSelect(file) {
     if (!file) return;
-    
     const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/bmp', 'image/webp'];
     if (!validTypes.includes(file.type)) {
         showError('Please select a valid image file (JPEG, PNG, GIF, BMP, or WEBP).');
         return;
     }
-    
     state.selectedFile = file;
     elements.uploadBtn.disabled = false;
-    
     if (state.settings.previewEnabled) {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -160,50 +133,36 @@ function changeImage() {
 
 async function uploadImage() {
     if (!state.selectedFile) return;
-    
     elements.uploadBtn.disabled = true;
     showLoading();
-    
     const formData = new FormData();
     formData.append('image', state.selectedFile);
-    
     try {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), state.settings.timeout * 1000);
-        
         const response = await fetch(state.settings.apiUrl, {
             method: 'POST',
             body: formData,
             signal: controller.signal
         });
-        
         clearTimeout(timeoutId);
-        
         if (!response.ok) {
             throw new Error(`Server responded with status: ${response.status}`);
         }
-        
         const data = await response.json();
-        
         if (data.status === 'error') {
             throw new Error(data.message || 'Unknown error occurred');
         }
-        
-        // Process successful response
         state.results = data;
         processResults();
         hideLoading();
         showResultsSection();
-        
-        // Save results if enabled
         if (state.settings.saveResults) {
             saveResultsToLocalStorage();
         }
-        
     } catch (error) {
         hideLoading();
         elements.uploadBtn.disabled = false;
-        
         if (error.name === 'AbortError') {
             showError(`Request timed out after ${state.settings.timeout} seconds. Please try again or adjust timeout in settings.`);
         } else {
@@ -212,38 +171,29 @@ async function uploadImage() {
     }
 }
 
-// Results Processing
 function processResults() {
     const { data } = state.results;
-    
-    // Clear previous results
     elements.tableView.innerHTML = '';
     state.slides = [];
     state.currentSlideIndex = 0;
-    
     if (Array.isArray(data)) {
-        // No sections
         createTable('Results', data);
         createSlides('Results', data);
     } else {
-        // With sections
         for (const section in data) {
             createTable(section, data[section]);
             createSlides(section, data[section]);
         }
     }
-    
     updateSlideView();
 }
 
 function createTable(sectionName, items) {
     const table = document.createElement('table');
     table.className = 'results-table';
-    
     const caption = document.createElement('caption');
     caption.textContent = sectionName;
     table.appendChild(caption);
-    
     const thead = document.createElement('thead');
     const headerRow = document.createElement('tr');
     ['Question Number', 'Answer'].forEach(text => {
@@ -253,23 +203,18 @@ function createTable(sectionName, items) {
     });
     thead.appendChild(headerRow);
     table.appendChild(thead);
-    
     const tbody = document.createElement('tbody');
     items.forEach(item => {
         const row = document.createElement('tr');
-        
         const questionCell = document.createElement('td');
         questionCell.textContent = item.question_number;
         row.appendChild(questionCell);
-        
         const answerCell = document.createElement('td');
         answerCell.textContent = item.answer;
         row.appendChild(answerCell);
-        
         tbody.appendChild(row);
     });
     table.appendChild(tbody);
-    
     elements.tableView.appendChild(table);
 }
 
@@ -281,21 +226,17 @@ function createSlides(sectionName, items) {
             answer: item.answer
         });
     });
-    
     elements.totalSlides.textContent = state.slides.length;
 }
 
 function updateSlideView() {
     if (state.slides.length === 0) return;
-    
     const slide = state.slides[state.currentSlideIndex];
     elements.currentSlide.textContent = state.currentSlideIndex + 1;
     elements.slideNumber.textContent = state.currentSlideIndex + 1;
     elements.slideTitle.textContent = `${slide.section} - Question ${slide.questionNumber}`;
     elements.currentQuestion.textContent = slide.questionNumber;
     elements.currentAnswer.textContent = slide.answer;
-    
-    // Enable/disable navigation buttons
     elements.prevSlide.disabled = state.currentSlideIndex === 0;
     elements.nextSlide.disabled = state.currentSlideIndex === state.slides.length - 1;
 }
@@ -319,16 +260,12 @@ function saveResultsToLocalStorage() {
         timestamp: new Date().toISOString(),
         results: state.results
     });
-    
     try {
         const existingResults = localStorage.getItem('imageProcessorResults') || '[]';
         const resultsArray = JSON.parse(existingResults);
-        
-        // Limit to last 10 results to prevent localStorage overflow
         if (resultsArray.length >= 10) {
             resultsArray.shift();
         }
-        
         resultsArray.push(JSON.parse(savedResults));
         localStorage.setItem('imageProcessorResults', JSON.stringify(resultsArray));
     } catch (error) {
@@ -338,11 +275,9 @@ function saveResultsToLocalStorage() {
 
 function downloadResults() {
     if (!state.results) return;
-    
     const resultsJSON = JSON.stringify(state.results, null, 2);
     const blob = new Blob([resultsJSON], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    
     const a = document.createElement('a');
     a.href = url;
     a.download = `image-results-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
@@ -350,15 +285,11 @@ function downloadResults() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
     showNotification('Results downloaded successfully');
 }
 
-// UI Helpers
 function showResultsSection() {
     elements.resultsSection.classList.remove('hidden');
-    
-    // Apply staggered animations to results elements
     const animationElements = elements.resultsSection.querySelectorAll('.results-table, .slide-container, .results-actions');
     animationElements.forEach((el, index) => {
         el.style.opacity = '0';
@@ -369,8 +300,6 @@ function showResultsSection() {
             el.style.transform = 'translateY(0)';
         }, index * 150);
     });
-    
-    // Scroll to results
     setTimeout(() => {
         elements.resultsSection.scrollIntoView({ behavior: 'smooth' });
     }, 100);
@@ -394,12 +323,9 @@ function hideError() {
 }
 
 function showNotification(message) {
-    // Create notification element
     const notification = document.createElement('div');
     notification.className = 'notification';
     notification.textContent = message;
-    
-    // Style the notification
     notification.style.position = 'fixed';
     notification.style.bottom = '20px';
     notification.style.left = '50%';
@@ -412,16 +338,10 @@ function showNotification(message) {
     notification.style.zIndex = '1000';
     notification.style.opacity = '0';
     notification.style.transition = 'opacity 0.3s ease';
-    
-    // Add to DOM
     document.body.appendChild(notification);
-    
-    // Animate in
     setTimeout(() => {
         notification.style.opacity = '1';
     }, 10);
-    
-    // Remove after delay
     setTimeout(() => {
         notification.style.opacity = '0';
         setTimeout(() => {
@@ -431,116 +351,91 @@ function showNotification(message) {
 }
 
 function resetApp() {
-    // Reset file selection
     elements.fileInput.value = '';
     state.selectedFile = null;
     elements.uploadBtn.disabled = true;
-    
-    // Reset preview
     if (state.settings.previewEnabled) {
         elements.previewContainer.classList.add('hidden');
         elements.dropArea.classList.remove('hidden');
     } else {
         elements.dropArea.textContent = 'Drag & drop image or click to browse';
     }
-    
-    // Hide results section
     elements.resultsSection.classList.add('hidden');
-    
-    // Reset results data
     state.results = null;
     state.slides = [];
     state.currentSlideIndex = 0;
-    
-    // Scroll back to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// Event Listeners Setup
+function toggleFullscreen() {
+    const slideContainer = elements.slideView.querySelector('.slide-container');
+    slideContainer.classList.toggle('fullscreen');
+    if (slideContainer.classList.contains('fullscreen')) {
+        elements.fullscreenBtn.textContent = 'fullscreen_exit';
+    } else {
+        elements.fullscreenBtn.textContent = 'fullscreen';
+    }
+}
+
 function setupEventListeners() {
-    // Theme Toggle
     elements.themeToggle.addEventListener('click', toggleTheme);
-    
-    // File Upload
     elements.dropArea.addEventListener('click', () => elements.fileInput.click());
     elements.fileInput.addEventListener('change', (e) => handleFileSelect(e.target.files[0]));
     elements.changeImageBtn.addEventListener('click', changeImage);
     elements.uploadBtn.addEventListener('click', uploadImage);
-    
-    // Drag and Drop
     elements.dropArea.addEventListener('dragover', (e) => {
         e.preventDefault();
         elements.dropArea.classList.add('dragover');
     });
-    
     elements.dropArea.addEventListener('dragleave', () => {
         elements.dropArea.classList.remove('dragover');
     });
-    
     elements.dropArea.addEventListener('drop', (e) => {
         e.preventDefault();
         elements.dropArea.classList.remove('dragover');
         handleFileSelect(e.dataTransfer.files[0]);
     });
-    
-    // Results View Toggle
     elements.tableViewBtn.addEventListener('click', () => {
         elements.tableViewBtn.classList.add('active');
         elements.slideViewBtn.classList.remove('active');
         elements.tableView.classList.remove('hidden');
         elements.slideView.classList.add('hidden');
     });
-    
     elements.slideViewBtn.addEventListener('click', () => {
         elements.slideViewBtn.classList.add('active');
         elements.tableViewBtn.classList.remove('active');
         elements.slideView.classList.remove('hidden');
         elements.tableView.classList.add('hidden');
     });
-    
-    // Slide Navigation
     elements.nextSlide.addEventListener('click', nextSlide);
     elements.prevSlide.addEventListener('click', prevSlide);
-    
-    // Keyboard navigation for slides
     document.addEventListener('keydown', (e) => {
         if (elements.slideView.classList.contains('hidden')) return;
-        
         if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
             nextSlide();
         } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
             prevSlide();
         }
     });
-    
-    // Results Actions
     elements.saveResultsBtn.addEventListener('click', downloadResults);
     elements.newUploadBtn.addEventListener('click', resetApp);
-    
-    // Error
     elements.dismissError.addEventListener('click', hideError);
-    
-    // Settings
     elements.settingsBtn.addEventListener('click', () => {
         elements.settingsModal.classList.remove('hidden');
     });
-    
     elements.closeSettings.addEventListener('click', () => {
         elements.settingsModal.classList.add('hidden');
     });
-    
     elements.saveSettings.addEventListener('click', () => {
         saveSettings();
         elements.settingsModal.classList.add('hidden');
     });
-    
-    // Close modal on outside click
     elements.settingsModal.addEventListener('click', (e) => {
         if (e.target === elements.settingsModal) {
             elements.settingsModal.classList.add('hidden');
         }
     });
+    elements.fullscreenBtn.addEventListener('click', toggleFullscreen); // P6c14
 }
 
-// Initialize app
 document.addEventListener('DOMContentLoaded', init);

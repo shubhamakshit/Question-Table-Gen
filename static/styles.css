@@ -411,8 +411,8 @@ body {
     background-color: var(--primary-container);
     border: none;
     border-radius: 50%;
-    width: 48px;
-    height: 48px;
+    width: 60px;
+    height: 60px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1288,5 +1288,3 @@ body.dark-theme #theme-toggle:active .material-icons {
     50% { transform: scale(1.2); }
     100% { transform: scale(1); }
 }
-
-
