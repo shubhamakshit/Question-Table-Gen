@@ -14,6 +14,9 @@
         <header class="app-bar">
             <h1 class="app-title">Image Answer Analyzer</h1>
             <div class="app-bar-actions">
+                <button id="history-btn" class="icon-button" aria-label="History">
+                    <span class="material-icons">history</span>
+                </button>
                 <button id="settings-btn" class="icon-button" aria-label="Settings">
                     <span class="material-icons">settings</span>
                 </button>
@@ -84,6 +87,10 @@
                                 <button id="prev-slide" class="nav-btn" disabled>
                                     <span class="material-icons">arrow_back</span>
                                 </button>
+                                <div class="slide-nav-input">
+                                    <input type="number" id="slide-go-input" class="text-input" min="1">
+                                    <button id="slide-go-btn" class="button primary">Go</button>
+                                </div>
                                 <p><span id="current-slide">1</span> / <span id="total-slides">0</span></p>
                                 <button id="next-slide" class="nav-btn" disabled>
                                     <span class="material-icons">arrow_forward</span>
@@ -159,6 +166,24 @@
                 </div>
                 <div class="modal-footer">
                     <button id="save-settings" class="button primary">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Modal -->
+        <div id="history-modal" class="modal hidden">
+            <div class="modal-content card">
+                <div class="modal-header">
+                    <h2>History</h2>
+                    <button id="close-history" class="icon-button">
+                        <span class="material-icons">close</span>
+                    </button>
+                </div>
+                <div id="history-list" class="modal-body">
+                    <!-- History items will be injected here -->
+                </div>
+                <div class="modal-footer">
+                    <button id="clear-history-btn" class="button primary">Clear History</button>
                 </div>
             </div>
         </div>

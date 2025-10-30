@@ -30,6 +30,8 @@ const elements = {
     currentQuestion: document.getElementById('current-question'),
     currentAnswer: document.getElementById('current-answer'),
     slideTitle: document.getElementById('slide-title'),
+    slideGoInput: document.getElementById('slide-go-input'),
+    slideGoBtn: document.getElementById('slide-go-btn'),
     saveResultsBtn: document.getElementById('save-results-btn'),
     newUploadBtn: document.getElementById('new-upload-btn'),
     
@@ -49,7 +51,14 @@ const elements = {
     apiUrl: document.getElementById('api-url'),
     timeout: document.getElementById('timeout'),
     previewEnabled: document.getElementById('preview-enabled'),
-    saveResults: document.getElementById('save-results')
+    saveResults: document.getElementById('save-results'),
+
+    // History
+    historyBtn: document.getElementById('history-btn'),
+    historyModal: document.getElementById('history-modal'),
+    closeHistory: document.getElementById('close-history'),
+    historyList: document.getElementById('history-list'),
+    clearHistoryBtn: document.getElementById('clear-history-btn')
 };
 
 // State
@@ -197,7 +206,7 @@ async function uploadImage() {
         
         // Save results if enabled
         if (state.settings.saveResults) {
-            saveResultsToLocalStorage();
+            await saveResultsToLocalStorage();
         }
         
     } catch (error) {
@@ -314,10 +323,31 @@ function prevSlide() {
     }
 }
 
-function saveResultsToLocalStorage() {
+function goToSlide() {
+    const slideNumber = parseInt(elements.slideGoInput.value);
+    if (slideNumber && slideNumber > 0 && slideNumber <= state.slides.length) {
+        state.currentSlideIndex = slideNumber - 1;
+        updateSlideView();
+        elements.slideGoInput.value = '';
+    }
+}
+
+function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = error => reject(error);
+    });
+}
+
+async function saveResultsToLocalStorage() {
+    const imageBase64 = await fileToBase64(state.selectedFile);
+
     const savedResults = JSON.stringify({
         timestamp: new Date().toISOString(),
-        results: state.results
+        results: state.results,
+        image: imageBase64
     });
     
     try {
@@ -352,6 +382,70 @@ function downloadResults() {
     URL.revokeObjectURL(url);
     
     showNotification('Results downloaded successfully');
+}
+
+// History
+function openHistoryModal() {
+    const history = JSON.parse(localStorage.getItem('imageProcessorResults') || '[]');
+    elements.historyList.innerHTML = ''; // Clear previous list
+
+    if (history.length === 0) {
+        elements.historyList.innerHTML = '<p>No history found.</p>';
+    } else {
+        history.forEach(item => {
+            const listItem = document.createElement('div');
+            listItem.className = 'history-item';
+            listItem.innerHTML = `
+                <p class="history-timestamp">${new Date(item.timestamp).toLocaleString()}</p>
+                <button class="button secondary load-history-btn" data-timestamp="${item.timestamp}">Load</button>
+            `;
+            elements.historyList.appendChild(listItem);
+        });
+    }
+
+    elements.historyModal.classList.remove('hidden');
+}
+
+function closeHistoryModal() {
+    elements.historyModal.classList.add('hidden');
+}
+
+function clearHistory() {
+    if (confirm('Are you sure you want to clear all history? This cannot be undone.')) {
+        localStorage.removeItem('imageProcessorResults');
+        openHistoryModal(); // Refresh the modal view
+        showNotification('History cleared');
+    }
+}
+
+function handleHistoryClick(e) {
+    if (e.target.classList.contains('load-history-btn')) {
+        const timestamp = e.target.dataset.timestamp;
+        loadResultFromHistory(timestamp);
+    }
+}
+
+function loadResultFromHistory(timestamp) {
+    const history = JSON.parse(localStorage.getItem('imageProcessorResults') || '[]');
+    const historyItem = history.find(item => item.timestamp === timestamp);
+
+    if (historyItem) {
+        state.results = historyItem.results;
+        
+        // Load image
+        if (historyItem.image) {
+            elements.imagePreview.src = historyItem.image;
+            elements.previewContainer.classList.remove('hidden');
+            elements.dropArea.classList.add('hidden');
+        }
+        
+        processResults();
+        closeHistoryModal();
+        showResultsSection();
+        showNotification('Loaded results from history');
+    } else {
+        showError('Could not find the selected history item.');
+    }
 }
 
 // UI Helpers
@@ -501,6 +595,12 @@ function setupEventListeners() {
     // Slide Navigation
     elements.nextSlide.addEventListener('click', nextSlide);
     elements.prevSlide.addEventListener('click', prevSlide);
+    elements.slideGoBtn.addEventListener('click', goToSlide);
+    elements.slideGoInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            goToSlide();
+        }
+    });
     
     // Keyboard navigation for slides
     document.addEventListener('keydown', (e) => {
@@ -538,6 +638,17 @@ function setupEventListeners() {
     elements.settingsModal.addEventListener('click', (e) => {
         if (e.target === elements.settingsModal) {
             elements.settingsModal.classList.add('hidden');
+        }
+    });
+
+    // History
+    elements.historyBtn.addEventListener('click', openHistoryModal);
+    elements.closeHistory.addEventListener('click', closeHistoryModal);
+    elements.clearHistoryBtn.addEventListener('click', clearHistory);
+    elements.historyList.addEventListener('click', handleHistoryClick);
+    elements.historyModal.addEventListener('click', (e) => {
+        if (e.target === elements.historyModal) {
+            closeHistoryModal();
         }
     });
 }

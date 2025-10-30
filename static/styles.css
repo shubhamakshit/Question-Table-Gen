@@ -474,6 +474,23 @@ body {
     gap: 1rem;
 }
 
+.slide-nav-input {
+    display: flex;
+    align-items: center;
+}
+
+.slide-nav-input .text-input {
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    border-right: none;
+    width: 70px;
+}
+
+.slide-nav-input .button {
+    border-top-left-radius: 0;
+    border-bottom-left-radius: 0;
+}
+
 .nav-btn {
     background-color: var(--primary-container);
     border: none;
