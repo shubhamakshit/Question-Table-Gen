@@ -285,10 +285,33 @@ class FolderManager {
                         <span class="material-icons">edit</span>
                         Edit
                     </button>
-                    <button class="button primary" onclick="folderManager.uploadToFolder(${folder.id})">
+                    <button class="button primary" onclick="folderManager.showUploadInFolder(${folder.id})">
                         <span class="material-icons">add_photo_alternate</span>
                         Add Images
                     </button>
+                </div>
+            </div>
+            
+            <!-- Inline Upload Section -->
+            <div id="folder-upload-section" class="folder-upload-section hidden">
+                <div class="upload-header">
+                    <h3>Upload Images to ${this.escapeHtml(folder.name)}</h3>
+                    <button class="button secondary small" onclick="folderManager.hideUploadInFolder()">
+                        <span class="material-icons">close</span>
+                        Close
+                    </button>
+                </div>
+                <div id="folder-drop-area" class="folder-drop-area">
+                    <span class="material-icons upload-icon">cloud_upload</span>
+                    <p>Drag & drop image, click to browse, or paste from clipboard (Ctrl+V)</p>
+                    <input type="file" id="folder-file-input" accept="image/*" multiple style="display: none;">
+                </div>
+                <div id="folder-preview-container" class="folder-preview-container hidden">
+                    <div id="folder-image-previews" class="image-previews"></div>
+                    <div class="upload-actions">
+                        <button id="folder-change-images" class="button secondary">Change Images</button>
+                        <button id="folder-upload-btn" class="button primary">Upload & Process All</button>
+                    </div>
                 </div>
             </div>
             
@@ -1210,9 +1233,281 @@ class FolderManager {
         });
     }
 
+    showUploadInFolder(folderId) {
+        const uploadSection = document.getElementById('folder-upload-section');
+        if (uploadSection) {
+            uploadSection.classList.remove('hidden');
+            this.setupFolderUpload(folderId);
+            
+            // Scroll to upload section
+            uploadSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }
+
+    hideUploadInFolder() {
+        const uploadSection = document.getElementById('folder-upload-section');
+        const previewContainer = document.getElementById('folder-preview-container');
+        const dropArea = document.getElementById('folder-drop-area');
+        
+        if (uploadSection) uploadSection.classList.add('hidden');
+        if (previewContainer) previewContainer.classList.add('hidden');
+        if (dropArea) dropArea.classList.remove('hidden');
+        
+        // Clear selected files
+        this.selectedFiles = [];
+    }
+
+    setupFolderUpload(folderId) {
+        this.selectedFiles = [];
+        this.uploadFolderId = folderId;
+        
+        const dropArea = document.getElementById('folder-drop-area');
+        const fileInput = document.getElementById('folder-file-input');
+        const uploadBtn = document.getElementById('folder-upload-btn');
+        const changeBtn = document.getElementById('folder-change-images');
+        
+        // Click to browse
+        if (dropArea) {
+            dropArea.onclick = () => fileInput?.click();
+        }
+        
+        // File input change
+        if (fileInput) {
+            fileInput.onchange = (e) => {
+                const files = Array.from(e.target.files);
+                this.handleFolderFiles(files);
+            };
+        }
+        
+        // Drag and drop
+        if (dropArea) {
+            dropArea.ondragover = (e) => {
+                e.preventDefault();
+                dropArea.classList.add('dragover');
+            };
+            
+            dropArea.ondragleave = () => {
+                dropArea.classList.remove('dragover');
+            };
+            
+            dropArea.ondrop = (e) => {
+                e.preventDefault();
+                dropArea.classList.remove('dragover');
+                const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                this.handleFolderFiles(files);
+            };
+        }
+        
+        // Paste from clipboard
+        document.addEventListener('paste', this.handlePaste.bind(this));
+        
+        // Upload button
+        if (uploadBtn) {
+            uploadBtn.onclick = () => this.uploadFolderImages();
+        }
+        
+        // Change button
+        if (changeBtn) {
+            changeBtn.onclick = () => {
+                document.getElementById('folder-preview-container').classList.add('hidden');
+                document.getElementById('folder-drop-area').classList.remove('hidden');
+                this.selectedFiles = [];
+                if (fileInput) fileInput.value = '';
+            };
+        }
+    }
+
+    handlePaste(e) {
+        // Only handle paste when upload section is visible
+        const uploadSection = document.getElementById('folder-upload-section');
+        if (!uploadSection || uploadSection.classList.contains('hidden')) {
+            return;
+        }
+        
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        
+        const imageFiles = [];
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.startsWith('image/')) {
+                const file = items[i].getAsFile();
+                if (file) imageFiles.push(file);
+            }
+        }
+        
+        if (imageFiles.length > 0) {
+            e.preventDefault();
+            this.handleFolderFiles(imageFiles);
+            this.showNotification(`Pasted ${imageFiles.length} image(s) from clipboard`, 'success');
+        }
+    }
+
+    async handleFolderFiles(files) {
+        if (!files || files.length === 0) return;
+        
+        // Validate files
+        const validFiles = files.filter(f => f.type.startsWith('image/'));
+        if (validFiles.length === 0) {
+            this.showNotification('No valid image files found', 'error');
+            return;
+        }
+        
+        this.selectedFiles = validFiles;
+        
+        // Show preview
+        const dropArea = document.getElementById('folder-drop-area');
+        const previewContainer = document.getElementById('folder-preview-container');
+        const previewsDiv = document.getElementById('folder-image-previews');
+        
+        if (dropArea) dropArea.classList.add('hidden');
+        if (previewContainer) previewContainer.classList.remove('hidden');
+        
+        // Generate previews
+        if (previewsDiv) {
+            previewsDiv.innerHTML = '';
+            
+            for (const file of validFiles) {
+                const preview = document.createElement('div');
+                preview.className = 'image-preview-item';
+                
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.onload = () => URL.revokeObjectURL(img.src);
+                
+                const name = document.createElement('span');
+                name.className = 'preview-name';
+                name.textContent = file.name;
+                
+                preview.appendChild(img);
+                preview.appendChild(name);
+                previewsDiv.appendChild(preview);
+            }
+        }
+    }
+
+    async uploadFolderImages() {
+        if (!this.selectedFiles || this.selectedFiles.length === 0) {
+            this.showNotification('No files selected', 'error');
+            return;
+        }
+        
+        const uploadBtn = document.getElementById('folder-upload-btn');
+        if (uploadBtn) {
+            uploadBtn.disabled = true;
+            uploadBtn.innerHTML = '<span class="material-icons rotating">sync</span> Uploading...';
+        }
+        
+        let successCount = 0;
+        let errorCount = 0;
+        
+        for (const file of this.selectedFiles) {
+            try {
+                // Create thumbnail
+                const thumbnail = await this.createThumbnail(file);
+                const imageName = file.name.replace(/\.[^/.]+$/, "");
+                
+                // Save to IndexedDB
+                const savedImage = await window.imageDB.addImage(
+                    this.uploadFolderId,
+                    imageName,
+                    file,
+                    thumbnail
+                );
+                
+                // Process with API
+                const formData = new FormData();
+                formData.append('image', file);
+                
+                const settings = JSON.parse(localStorage.getItem('imageProcessorSettings') || '{}');
+                const apiUrl = settings.apiUrl || 'http://127.0.0.1:5000/upload';
+                const timeout = (settings.timeout || 30) * 1000;
+                
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    body: formData,
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.status !== 'error') {
+                        await window.imageDB.saveResult(savedImage.id, this.uploadFolderId, data);
+                        successCount++;
+                    } else {
+                        errorCount++;
+                    }
+                } else {
+                    errorCount++;
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                errorCount++;
+            }
+        }
+        
+        // Reset UI
+        this.hideUploadInFolder();
+        
+        // Refresh folder view
+        const folder = (await window.imageDB.getFolders()).find(f => f.id === this.uploadFolderId);
+        const images = await window.imageDB.getImagesByFolder(this.uploadFolderId);
+        this.showFolderDetail(folder, images);
+        
+        // Update stats
+        await this.updateStats();
+        
+        // Show result
+        if (errorCount === 0) {
+            this.showNotification(`Successfully uploaded and processed ${successCount} image(s)`, 'success');
+        } else {
+            this.showNotification(`Uploaded ${successCount} image(s), ${errorCount} failed`, 'warning');
+        }
+    }
+
+    async createThumbnail(file, maxWidth = 200, maxHeight = 150) {
+        return new Promise((resolve) => {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = () => {
+                let { width, height } = img;
+                const aspectRatio = width / height;
+                
+                if (width > maxWidth) {
+                    width = maxWidth;
+                    height = width / aspectRatio;
+                }
+                
+                if (height > maxHeight) {
+                    height = maxHeight;
+                    width = height * aspectRatio;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL('image/jpeg', 0.8));
+            };
+            
+            img.onerror = () => {
+                const reader = new FileReader();
+                reader.onload = (e) => resolve(e.target.result);
+                reader.readAsDataURL(file);
+            };
+            
+            img.src = URL.createObjectURL(file);
+        });
+    }
+
     uploadToFolder(folderId) {
-        document.getElementById('upload-folder-select').value = folderId;
-        this.showNotification('Folder selected for upload. Go to upload section to add images.', 'info');
+        // Legacy method - redirect to show upload
+        this.showUploadInFolder(folderId);
     }
 
     toggleSelectAll() {
