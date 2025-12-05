@@ -68,6 +68,7 @@ const state = {
     results: null,
     currentSlideIndex: 0,
     slides: [],
+    currentSection: 'folders',
     settings: {
         apiUrl: DEFAULT_API_URL,
         timeout: DEFAULT_TIMEOUT,
@@ -81,6 +82,16 @@ function init() {
     loadSettings();
     setupEventListeners();
     applyTheme();
+    
+    // Initialize with folders section
+    switchToSection('folders');
+    
+    // Wait for folder manager to load
+    setTimeout(() => {
+        if (window.folderManager) {
+            console.log('Folder manager loaded');
+        }
+    }, 500);
 }
 
 // Settings
@@ -170,13 +181,32 @@ function changeImage() {
 async function uploadImage() {
     if (!state.selectedFile) return;
     
+    // Check if folder is selected
+    const selectedFolderId = document.getElementById('upload-folder-select')?.value;
+    if (!selectedFolderId) {
+        showError('Please select a folder first');
+        return;
+    }
+    
     elements.uploadBtn.disabled = true;
     showLoading();
     
-    const formData = new FormData();
-    formData.append('image', state.selectedFile);
-    
     try {
+        // First, save image to IndexedDB with thumbnail
+        const thumbnail = await createThumbnail(state.selectedFile);
+        const imageName = state.selectedFile.name.replace(/\.[^/.]+$/, ""); // Remove extension
+        
+        const savedImage = await window.imageDB.addImage(
+            parseInt(selectedFolderId),
+            imageName,
+            state.selectedFile,
+            thumbnail
+        );
+        
+        // Then upload to server for processing
+        const formData = new FormData();
+        formData.append('image', state.selectedFile);
+        
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), state.settings.timeout * 1000);
         
@@ -198,13 +228,24 @@ async function uploadImage() {
             throw new Error(data.message || 'Unknown error occurred');
         }
         
+        // Save results to IndexedDB
+        await window.imageDB.saveResult(savedImage.id, parseInt(selectedFolderId), data);
+        
         // Process successful response
         state.results = data;
+        state.currentImageId = savedImage.id;
         processResults();
         hideLoading();
         showResultsSection();
         
-        // Save results if enabled
+        // Update folder manager stats
+        if (window.folderManager) {
+            await window.folderManager.updateStats();
+        }
+        
+        showNotification('Image processed and saved successfully');
+        
+        // Save results to localStorage if enabled (for backward compatibility)
         if (state.settings.saveResults) {
             await saveResultsToLocalStorage();
         }
@@ -338,6 +379,47 @@ function fileToBase64(file) {
         reader.readAsDataURL(file);
         reader.onload = () => resolve(reader.result);
         reader.onerror = error => reject(error);
+    });
+}
+
+// Create thumbnail for image
+async function createThumbnail(file, maxWidth = 200, maxHeight = 150) {
+    return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        
+        img.onload = () => {
+            // Calculate thumbnail dimensions
+            let { width, height } = img;
+            const aspectRatio = width / height;
+            
+            if (width > maxWidth) {
+                width = maxWidth;
+                height = width / aspectRatio;
+            }
+            
+            if (height > maxHeight) {
+                height = maxHeight;
+                width = height * aspectRatio;
+            }
+            
+            canvas.width = width;
+            canvas.height = height;
+            
+            // Draw and compress
+            ctx.drawImage(img, 0, 0, width, height);
+            const thumbnail = canvas.toDataURL('image/jpeg', 0.8);
+            resolve(thumbnail);
+        };
+        
+        img.onerror = () => {
+            // Fallback to original file as base64 if thumbnail creation fails
+            fileToBase64(file).then(resolve);
+        };
+        
+        // Create object URL for the image
+        img.src = URL.createObjectURL(file);
     });
 }
 
@@ -620,13 +702,38 @@ function setupEventListeners() {
     // Error
     elements.dismissError.addEventListener('click', hideError);
     
+    // Navigation tabs
+    const navTabs = document.querySelectorAll('.nav-tab');
+    navTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const section = tab.dataset.section;
+            switchToSection(section);
+            
+            // Update active tab
+            navTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+        });
+    });
+
     // Settings
     elements.settingsBtn.addEventListener('click', () => {
         elements.settingsModal.classList.remove('hidden');
     });
     
-    elements.closeSettings.addEventListener('click', () => {
+    const closeSettingsBtn = document.getElementById('close-settings');
+    const cancelSettingsBtn = document.getElementById('cancel-settings');
+    const resetSettingsBtn = document.getElementById('reset-settings');
+    
+    if (closeSettingsBtn) closeSettingsBtn.addEventListener('click', () => {
         elements.settingsModal.classList.add('hidden');
+    });
+    
+    if (cancelSettingsBtn) cancelSettingsBtn.addEventListener('click', () => {
+        elements.settingsModal.classList.add('hidden');
+    });
+    
+    if (resetSettingsBtn) resetSettingsBtn.addEventListener('click', () => {
+        resetToDefaults();
     });
     
     elements.saveSettings.addEventListener('click', () => {
@@ -641,6 +748,15 @@ function setupEventListeners() {
         }
     });
 
+    // Enhanced data management buttons
+    const exportDataBtn = document.getElementById('export-data-btn');
+    const importDataBtn = document.getElementById('import-data-btn');
+    const clearDataBtn = document.getElementById('clear-data-btn');
+    
+    if (exportDataBtn) exportDataBtn.addEventListener('click', exportAllData);
+    if (importDataBtn) importDataBtn.addEventListener('click', importAllData);
+    if (clearDataBtn) clearDataBtn.addEventListener('click', clearAllData);
+
     // History
     elements.historyBtn.addEventListener('click', openHistoryModal);
     elements.closeHistory.addEventListener('click', closeHistoryModal);
@@ -651,6 +767,197 @@ function setupEventListeners() {
             closeHistoryModal();
         }
     });
+}
+
+// Make functions globally accessible for folder manager
+window.state = state;
+window.processResults = processResults;
+window.updateSlideView = updateSlideView;
+window.showResultsSection = showResultsSection;
+
+// Navigation function
+function switchToSection(section) {
+    const folderSection = document.getElementById('folder-section');
+    const uploadSection = document.getElementById('upload-section');
+    const resultsSection = document.getElementById('results-section');
+    
+    // Hide all sections first
+    const sections = [folderSection, uploadSection, resultsSection];
+    sections.forEach(sec => {
+        if (sec) {
+            sec.classList.add('hidden');
+            sec.style.display = 'none';
+        }
+    });
+    
+    // Show selected section
+    let targetSection = null;
+    switch (section) {
+        case 'folders':
+            targetSection = folderSection;
+            break;
+        case 'upload':
+            targetSection = uploadSection;
+            break;
+        case 'results':
+            targetSection = resultsSection;
+            break;
+    }
+    
+    if (targetSection) {
+        targetSection.classList.remove('hidden');
+        targetSection.style.display = 'block';
+    }
+    
+    // Update the current section state
+    state.currentSection = section;
+}
+
+// Enhanced settings functions
+function resetToDefaults() {
+    if (confirm('Reset all settings to defaults? This cannot be undone.')) {
+        state.settings = {
+            apiUrl: DEFAULT_API_URL,
+            timeout: DEFAULT_TIMEOUT,
+            previewEnabled: true,
+            saveResults: true
+        };
+        
+        // Update form elements
+        elements.apiUrl.value = state.settings.apiUrl;
+        elements.timeout.value = state.settings.timeout;
+        elements.previewEnabled.checked = state.settings.previewEnabled;
+        elements.saveResults.checked = state.settings.saveResults;
+        
+        showNotification('Settings reset to defaults');
+    }
+}
+
+// Data management functions
+async function exportAllData() {
+    try {
+        const data = {
+            timestamp: new Date().toISOString(),
+            version: '1.0',
+            settings: state.settings,
+            localStorage: {
+                imageProcessorSettings: localStorage.getItem('imageProcessorSettings'),
+                imageProcessorResults: localStorage.getItem('imageProcessorResults')
+            }
+        };
+        
+        // Add IndexedDB data if available
+        if (window.imageDB && window.imageDB.db) {
+            const folderData = await window.imageDB.exportData();
+            data.indexedDB = folderData;
+        }
+        
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `image-analyzer-backup-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        showNotification('Data exported successfully');
+    } catch (error) {
+        console.error('Export error:', error);
+        showNotification('Failed to export data');
+    }
+}
+
+async function importAllData() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        try {
+            const text = await file.text();
+            const data = JSON.parse(text);
+            
+            if (confirm('Import data? This will replace all current data and cannot be undone.')) {
+                // Import settings
+                if (data.settings) {
+                    state.settings = { ...state.settings, ...data.settings };
+                    loadSettings();
+                }
+                
+                // Import localStorage data
+                if (data.localStorage) {
+                    Object.entries(data.localStorage).forEach(([key, value]) => {
+                        if (value) localStorage.setItem(key, value);
+                    });
+                }
+                
+                // Import IndexedDB data
+                if (data.indexedDB && window.imageDB) {
+                    await window.imageDB.importData(data.indexedDB);
+                    if (window.folderManager) {
+                        await window.folderManager.loadFolders();
+                        await window.folderManager.updateStats();
+                    }
+                }
+                
+                showNotification('Data imported successfully');
+                setTimeout(() => location.reload(), 1000);
+            }
+        } catch (error) {
+            console.error('Import error:', error);
+            showNotification('Failed to import data - invalid file format');
+        }
+    };
+    
+    input.click();
+}
+
+async function clearAllData() {
+    const confirmText = prompt('Type "DELETE" to confirm clearing all data:');
+    
+    if (confirmText === 'DELETE') {
+        try {
+            // Clear localStorage
+            localStorage.removeItem('imageProcessorSettings');
+            localStorage.removeItem('imageProcessorResults');
+            
+            // Clear IndexedDB
+            if (window.imageDB) {
+                await window.imageDB.clearAll();
+            }
+            
+            showNotification('All data cleared successfully');
+            setTimeout(() => location.reload(), 1000);
+        } catch (error) {
+            console.error('Clear data error:', error);
+            showNotification('Failed to clear some data');
+        }
+    } else if (confirmText !== null) {
+        showNotification('Data not cleared - incorrect confirmation');
+    }
+}
+
+// Enhanced theme toggle
+function toggleTheme() {
+    state.theme = state.theme === 'light' ? 'dark' : 'light';
+    applyTheme();
+    
+    // Update theme button
+    const themeBtn = document.getElementById('theme-toggle');
+    const themeBtnLabel = themeBtn.querySelector('.btn-label');
+    if (themeBtnLabel) {
+        themeBtnLabel.textContent = state.theme === 'dark' ? 'Light Mode' : 'Dark Mode';
+    }
+    
+    // Save theme preference
+    const savedSettings = { ...state.settings, theme: state.theme };
+    localStorage.setItem('imageProcessorSettings', JSON.stringify(savedSettings));
 }
 
 // Initialize app

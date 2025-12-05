@@ -5,29 +5,65 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MD3 Image Analyzer</title>
     <link rel="stylesheet" href="static/styles.css">
+    <link rel="stylesheet" href="static/folder-styles.css">
+    <link rel="stylesheet" href="static/modern-ui.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body class="light-theme">
     <div class="app-container">
         <!-- App Bar -->
-        <header class="app-bar">
-            <h1 class="app-title">Image Answer Analyzer</h1>
-            <div class="app-bar-actions">
-                <button id="history-btn" class="icon-button" aria-label="History">
-                    <span class="material-icons">history</span>
-                </button>
-                <button id="settings-btn" class="icon-button" aria-label="Settings">
-                    <span class="material-icons">settings</span>
-                </button>
-                <button id="theme-toggle" class="icon-button" aria-label="Toggle theme">
-                    <span class="material-icons">dark_mode</span>
-                </button>
+        <header class="modern-app-bar">
+            <div class="app-brand">
+                <div class="brand-icon">
+                    <span class="material-icons">psychology</span>
+                </div>
+                <div class="brand-content">
+                    <h1 class="app-title">AI Image Analyzer</h1>
+                    <p class="app-subtitle">Intelligent Q&A Extraction</p>
+                </div>
+            </div>
+            <div class="app-nav">
+                <nav class="nav-tabs">
+                    <button class="nav-tab active" data-section="folders">
+                        <span class="material-icons">folder</span>
+                        Folders
+                    </button>
+                    <button class="nav-tab" data-section="upload">
+                        <span class="material-icons">upload</span>
+                        Upload
+                    </button>
+                    <button class="nav-tab" data-section="results">
+                        <span class="material-icons">analytics</span>
+                        Results
+                    </button>
+                </nav>
+                <div class="app-actions">
+                    <button id="history-btn" class="modern-action-btn" aria-label="History">
+                        <span class="material-icons">history</span>
+                        <span class="btn-label">History</span>
+                    </button>
+                    <button id="settings-btn" class="modern-action-btn" aria-label="Settings">
+                        <span class="material-icons">settings</span>
+                        <span class="btn-label">Settings</span>
+                    </button>
+                    <button id="theme-toggle" class="modern-action-btn theme-btn" aria-label="Toggle theme">
+                        <span class="material-icons">dark_mode</span>
+                        <span class="btn-label">Dark Mode</span>
+                    </button>
+                </div>
             </div>
         </header>
 
         <!-- Main Content -->
         <main>
+            <!-- Folder Section -->
+            <section id="folder-section" class="card">
+                <div class="card-content">
+                    <!-- Folder management content will be injected here by folder-manager.js -->
+                </div>
+            </section>
+
             <!-- Upload Section -->
             <section id="upload-section" class="card">
                 <div class="card-content">
@@ -123,72 +159,200 @@
 
         <!-- Settings Modal -->
         <div id="settings-modal" class="modal hidden">
-            <div class="modal-content card">
+            <div class="modal-content modern-modal">
                 <div class="modal-header">
-                    <h2>Settings</h2>
-                    <button id="close-settings" class="icon-button">
+                    <div class="modal-title-section">
+                        <div class="modal-icon">
+                            <span class="material-icons">settings</span>
+                        </div>
+                        <div>
+                            <h2>Application Settings</h2>
+                            <p class="modal-subtitle">Customize your image analysis experience</p>
+                        </div>
+                    </div>
+                    <button id="close-settings" class="modern-close-btn">
                         <span class="material-icons">close</span>
                     </button>
                 </div>
+                
                 <div class="modal-body">
-                    <div class="setting-item">
-                        <label for="api-url">API URL</label>
-                        <input type="text" id="api-url" class="text-input" value="http://127.0.0.1:5000/upload">
-                    </div>
-                    <div class="setting-item">
-                        <label for="timeout">Request Timeout (seconds)</label>
-                        <input type="number" id="timeout" class="text-input" min="1" value="30">
-                    </div>
-                    <div class="setting-item checkbox">
-                        <label for="preview-enabled">Enable Image Preview</label>
-                        <div class="switch">
-                            <input type="checkbox" id="preview-enabled" checked>
-                            <span class="slider"></span>
+                    <!-- API Configuration Section -->
+                    <div class="settings-section">
+                        <div class="section-header">
+                            <span class="material-icons section-icon">cloud</span>
+                            <h3>API Configuration</h3>
+                        </div>
+                        <div class="setting-item modern">
+                            <div class="setting-info">
+                                <label for="api-url">Server URL</label>
+                                <p class="setting-description">Backend server endpoint for image processing</p>
+                            </div>
+                            <div class="setting-control">
+                                <input type="text" id="api-url" class="modern-input" value="http://127.0.0.1:5000/upload" placeholder="Enter API URL">
+                            </div>
+                        </div>
+                        <div class="setting-item modern">
+                            <div class="setting-info">
+                                <label for="timeout">Request Timeout</label>
+                                <p class="setting-description">Maximum time to wait for server response</p>
+                            </div>
+                            <div class="setting-control">
+                                <div class="input-with-unit">
+                                    <input type="number" id="timeout" class="modern-input" min="5" max="300" value="30">
+                                    <span class="input-unit">seconds</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="setting-item checkbox">
-                        <label for="save-results">Save Results Locally</label>
-                        <div class="switch">
-                            <input type="checkbox" id="save-results" checked>
-                            <span class="slider"></span>
+
+                    <!-- User Experience Section -->
+                    <div class="settings-section">
+                        <div class="section-header">
+                            <span class="material-icons section-icon">tune</span>
+                            <h3>User Experience</h3>
+                        </div>
+                        <div class="setting-item modern checkbox">
+                            <div class="setting-info">
+                                <label for="preview-enabled">Image Preview</label>
+                                <p class="setting-description">Show image preview before processing</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="modern-switch">
+                                    <input type="checkbox" id="preview-enabled" checked>
+                                    <span class="switch-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="setting-item modern checkbox">
+                            <div class="setting-info">
+                                <label for="save-results">Local Storage</label>
+                                <p class="setting-description">Automatically save results to browser storage</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="modern-switch">
+                                    <input type="checkbox" id="save-results" checked>
+                                    <span class="switch-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="setting-item modern checkbox">
+                            <div class="setting-info">
+                                <label for="debug-enabled">Debug Console</label>
+                                <p class="setting-description">Show technical logs and debugging information</p>
+                            </div>
+                            <div class="setting-control">
+                                <label class="modern-switch">
+                                    <input type="checkbox" id="debug-enabled">
+                                    <span class="switch-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Data Management Section -->
+                    <div class="settings-section">
+                        <div class="section-header">
+                            <span class="material-icons section-icon">storage</span>
+                            <h3>Data Management</h3>
+                        </div>
+                        <div class="setting-actions">
+                            <button class="action-btn secondary" id="export-data-btn">
+                                <span class="material-icons">download</span>
+                                Export Data
+                            </button>
+                            <button class="action-btn secondary" id="import-data-btn">
+                                <span class="material-icons">upload</span>
+                                Import Data
+                            </button>
+                            <button class="action-btn danger" id="clear-data-btn">
+                                <span class="material-icons">delete_forever</span>
+                                Clear All Data
+                            </button>
                         </div>
                     </div>
                 </div>
-                <div class="setting-item checkbox">
-                    <div>
-                        <label for="debug-enabled">Enable Debug Console</label>
-                        <div class="setting-description">Show technical logs and debugging information</div>
+                
+                <div class="modal-footer modern">
+                    <div class="footer-actions">
+                        <button id="reset-settings" class="button secondary">
+                            <span class="material-icons">refresh</span>
+                            Reset to Defaults
+                        </button>
+                        <div class="primary-actions">
+                            <button id="cancel-settings" class="button secondary">Cancel</button>
+                            <button id="save-settings" class="button primary">
+                                <span class="material-icons">save</span>
+                                Save Changes
+                            </button>
+                        </div>
                     </div>
-                    <div class="switch">
-                        <input type="checkbox" id="debug-enabled">
-                        <span class="slider"></span>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button id="save-settings" class="button primary">Save</button>
                 </div>
             </div>
         </div>
 
         <!-- History Modal -->
         <div id="history-modal" class="modal hidden">
-            <div class="modal-content card">
+            <div class="modal-content modern-modal">
                 <div class="modal-header">
-                    <h2>History</h2>
-                    <button id="close-history" class="icon-button">
+                    <div class="modal-title-section">
+                        <div class="modal-icon">
+                            <span class="material-icons">history</span>
+                        </div>
+                        <div>
+                            <h2>Processing History</h2>
+                            <p class="modal-subtitle">View and manage your previous image analyses</p>
+                        </div>
+                    </div>
+                    <button id="close-history" class="modern-close-btn">
                         <span class="material-icons">close</span>
                     </button>
                 </div>
-                <div id="history-list" class="modal-body">
-                    <!-- History items will be injected here -->
+                
+                <div class="modal-body">
+                    <div class="history-controls">
+                        <div class="search-box">
+                            <span class="material-icons">search</span>
+                            <input type="text" placeholder="Search history..." class="modern-input" id="history-search">
+                        </div>
+                        <select class="modern-select" id="history-filter">
+                            <option value="all">All Items</option>
+                            <option value="recent">Recent (7 days)</option>
+                            <option value="month">This Month</option>
+                        </select>
+                    </div>
+                    
+                    <div id="history-list" class="history-container">
+                        <!-- History items will be injected here -->
+                    </div>
+                    
+                    <div class="empty-history hidden">
+                        <span class="material-icons">history_toggle_off</span>
+                        <h3>No History Found</h3>
+                        <p>Your processed images will appear here</p>
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button id="clear-history-btn" class="button primary">Clear History</button>
+                
+                <div class="modal-footer modern">
+                    <div class="footer-actions">
+                        <button id="export-history-btn" class="button secondary">
+                            <span class="material-icons">download</span>
+                            Export History
+                        </button>
+                        <div class="primary-actions">
+                            <button id="clear-history-btn" class="button danger">
+                                <span class="material-icons">delete</span>
+                                Clear All
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
+    <script src="static/database.js"></script>
+    <script src="static/folder-manager.js"></script>
+    <script src="static/navbar-scroll.js"></script>
     <script src="static/app.js"></script>
 </body>
 </html>
